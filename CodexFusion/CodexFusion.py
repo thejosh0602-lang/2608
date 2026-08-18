@@ -146,7 +146,7 @@ def run(context):
         # Reload the modeling module so the file currently on disk is executed.
         importlib.reload(helix)
         _write_log(
-            'Code revision: guide-rail helix sweep for untwisted baffle.'
+            'Code revision: guide-rail sweep with native Combine fallback.'
         )
 
         # This will run the start function in each of your commands as defined in commands/__init__.py

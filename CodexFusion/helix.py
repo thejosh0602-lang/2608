@@ -425,20 +425,63 @@ def _combine_bodies(
         tool_copy,
         boolean_type,
     )
-    if not succeeded or not target_copy.isValid or not target_copy.isSolid:
-        raise RuntimeError(f'Fusion temporary Boolean failed for {result_name}.')
-    if target_copy.volume <= 0:
-        raise RuntimeError(f'Fusion Boolean produced no volume: {result_name}.')
+    if succeeded and target_copy.isValid and target_copy.isSolid:
+        if target_copy.volume <= 0:
+            raise RuntimeError(f'Fusion Boolean produced no volume: {result_name}.')
 
-    if not target.deleteMe():
-        raise RuntimeError(f'Fusion could not replace Boolean target {target.name}.')
-    if not keep_tool and tool.isValid and not tool.deleteMe():
-        raise RuntimeError(f'Fusion could not consume Boolean tool {tool.name}.')
+        if not target.deleteMe():
+            raise RuntimeError(f'Fusion could not replace Boolean target {target.name}.')
+        if not keep_tool and tool.isValid and not tool.deleteMe():
+            raise RuntimeError(f'Fusion could not consume Boolean tool {tool.name}.')
 
-    result = component.bRepBodies.add(target_copy)
-    if not result:
-        raise RuntimeError(f'Fusion could not persist Boolean result {result_name}.')
+        result = component.bRepBodies.add(target_copy)
+        if not result:
+            raise RuntimeError(f'Fusion could not persist Boolean result {result_name}.')
+        result.name = result_name
+        result.attributes.add('CodexFusion', 'BooleanEngine', 'TemporaryBRep')
+        return result
+
+    # TemporaryBRepManager is fast but is less tolerant of a long sweep that
+    # intersects cylindrical faces many times.  Retry using Fusion's native
+    # Combine/Cut command.  In a direct design combineFeatures.add legitimately
+    # returns None on success, so validate the resulting persistent bodies
+    # instead of dereferencing the returned feature.
+    body_count_before = component.bRepBodies.count
+    tools = adsk.core.ObjectCollection.create()
+    tools.add(tool)
+    combine_features = component.features.combineFeatures
+    combine_input = combine_features.createInput(target, tools)
+    if not combine_input:
+        raise RuntimeError(
+            f'Fusion temporary Boolean and native Combine input failed for {result_name}.'
+        )
+    combine_input.operation = operation
+    combine_input.isKeepToolBodies = keep_tool
+    combine_input.isNewComponent = False
+    try:
+        combine_features.add(combine_input)
+    except Exception as native_error:
+        raise RuntimeError(
+            f'Fusion temporary Boolean and native Combine/Cut both failed for '
+            f'{result_name}: {native_error}'
+        ) from native_error
+
+    candidates = []
+    for index in range(component.bRepBodies.count):
+        body = component.bRepBodies.item(index)
+        if body and body.isValid and body.isSolid:
+            candidates.append(body)
+    tool_consumed = not tool.isValid or component.bRepBodies.count < body_count_before
+    if not candidates or (not keep_tool and not tool_consumed):
+        raise RuntimeError(
+            f'Fusion native Combine/Cut returned without changing {result_name}.'
+        )
+
+    result = target if target.isValid and target.isSolid else candidates[0]
+    if result.volume <= 0:
+        raise RuntimeError(f'Fusion native Combine produced no volume: {result_name}.')
     result.name = result_name
+    result.attributes.add('CodexFusion', 'BooleanEngine', 'NativeCombineFallback')
     return result
 
 
