@@ -1,0 +1,22 @@
+[2026-08-18T02:11:25+09:00] CodexFusion run started.
+[2026-08-18T02:11:25+09:00] Code revision: guide-rail helix sweep for untwisted baffle.
+[2026-08-18T02:11:25+09:00] Add-in commands started.
+[2026-08-18T02:11:27+09:00] CodexFusion run failed:
+Traceback (most recent call last):
+  File "D:/2608/CodexFusion/CodexFusion.py", line 157, in run
+    design = helix.build_double_pipe_with_helical_band()
+  File "D:\2608/CodexFusion\helix.py", line 558, in build_double_pipe_with_helical_band
+    annular_fluid = _subtract_solid_baffle_from_fluid(
+        component,
+        annular_fluid,
+        baffle,
+    )
+  File "D:\2608/CodexFusion\helix.py", line 453, in _subtract_solid_baffle_from_fluid
+    result = _combine_bodies(
+        component,
+    ...<4 lines>...
+        'Annular_Fluid_Watertight',
+    )
+  File "D:\2608/CodexFusion\helix.py", line 429, in _combine_bodies
+    raise RuntimeError(f'Fusion temporary Boolean failed for {result_name}.')
+RuntimeError: Fusion temporary Boolean failed for Annular_Fluid_Watertight.

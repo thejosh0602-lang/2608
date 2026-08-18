@@ -1,0 +1,63 @@
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# This file is part of nsCouette -- A high-performance code for direct         !
+# numerical simulations of turbulent Taylor-Couette flow                       !
+#                                                                              !
+# Copyright (C) 2019 Marc Avila, Bjoern Hof, Jose Manuel Lopez, Markus Rampp,  !
+#                    Liang Shi, Alberto Vela-Martin, Daniel Feldmann.          !
+#                                                                              !
+# nsCouette is free software: you can redistribute it and/or modify it under   !
+# the terms of the GNU General Public License as published by the Free         !
+# Software Foundation, either version 3 of the License, or (at your option)    !
+# any later version.                                                           !
+#                                                                              !
+# nsCouette is distributed in the hope that it will be useful, but WITHOUT ANY !
+# WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS    !
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more        !
+# details.                                                                     !
+#                                                                              !
+# You should have received a copy of the GNU General Public License along with !
+# nsCouette. If not, see <http://www.gnu.org/licenses/>.                       !
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+#Intel compilers (compiler suite 13.1 or later is recommended)
+# and Intel MKL (MKL 11.1 or later)
+
+###############################################
+#Intel compiler
+###############################################
+MPIFC = mpiifort
+FFLAGS = -qopenmp -fpp -O3 -xMIC-AVX512 -ipo -fp-model source -mcmodel medium -shared-intel 
+DEBUGFLAGS = -g -traceback -check all,noarg_temp_created -fpe0 -init=arrays -init=snan
+
+CC = icc 
+CFLAGS = -qopenmp -mcmodel medium -shared-intel
+
+RPATH=-Xlinker -rpath
+PPPRE=-Wp,
+PPSEP=,
+
+###############################################
+#BLAS, LAPACK from Intel MKL
+###############################################
+LIBLA = -L$(MKLROOT)/lib/intel64 -lmkl_lapack95_lp64 -lmkl_intel_lp64 -lmkl_sequential -lmkl_core -lpthread -lm $(RPATH)=$(MKLROOT)/lib/intel64
+DEFINES +=$(PPSEP)-DWITHMKL
+
+
+###############################################
+#FFTs from MKL (using MKL's FFTW wrappers)
+###############################################
+LIBFFT =
+INCFFT = $(MKLROOT)/include/fftw
+
+##FFTs from a generic FFTW
+#LIBFFT = -L$(FFTW_HOME)/lib -lfftw3_omp -lfftw3 -lm $(RPATH)=$(FFTW_HOME)/lib
+#INCFFT = $(FFTW_HOME)/include
+
+
+###############################################
+#MPI-parallel HDF5
+###############################################
+ifneq ($(HDF5IO),no)
+	LIBHDF5 = -L$(HDF5_HOME)/lib -lhdf5_fortran -lhdf5 -lz $(RPATH)=$(HDF5_HOME)/lib
+	INCLUDES = -I$(HDF5_HOME)/include
+endif
